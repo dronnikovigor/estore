@@ -12,4 +12,5 @@ public interface ProductService {
     Optional<Product> findProductBySku(final Long sku);
     List<Product> getAllProducts();
     BaseEntity saveProduct(final Product product);
+    void deleteProduct(final Product product);
 }

@@ -39,4 +39,9 @@ public class ProductServiceImpl implements ProductService {
     public BaseEntity saveProduct(Product product) {
         return productRepository.save(product);
     }
+
+    @Override
+    public void deleteProduct(Product product) {
+        productRepository.delete(product);
+    }
 }
