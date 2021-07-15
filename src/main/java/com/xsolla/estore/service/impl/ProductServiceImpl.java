@@ -1,13 +1,16 @@
 package com.xsolla.estore.service.impl;
 
-import com.xsolla.estore.model.BaseEntity;
+import com.xsolla.estore.dto.ProductDto;
 import com.xsolla.estore.model.Product;
+import com.xsolla.estore.model.Result;
 import com.xsolla.estore.repository.ProductRepository;
 import com.xsolla.estore.service.ProductService;
+import com.xsolla.estore.util.ProductUtil;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 
 @Service
@@ -16,32 +19,65 @@ public class ProductServiceImpl implements ProductService {
 
     private final ProductRepository productRepository;
 
-    public ProductServiceImpl(ProductRepository productRepository) {
+    public ProductServiceImpl(final ProductRepository productRepository) {
         this.productRepository = productRepository;
     }
 
     @Override
-    public Optional<Product> findProductById(Long id) {
-        return productRepository.findById(id);
+    public Optional<Product> getProduct(Long id, Long sku) {
+        Optional<Product> product = Optional.empty();
+        if (Objects.nonNull(id)) {
+            product = productRepository.findById(id);
+        }
+        if (product.isEmpty() && Objects.nonNull(sku)) {
+            product = productRepository.findBySku(sku);
+        }
+        return product;
     }
 
     @Override
-    public Optional<Product> findProductBySku(Long sku) {
-        return productRepository.findBySku(sku);
+    public List<Product> getAllProducts(boolean sortByPrice, boolean sortByType) {
+        if (!(sortByPrice || sortByType)) {
+            return productRepository.findAll();
+        } else if (sortByPrice && sortByType) {
+            return productRepository.findByOrderByTypeAsc();
+        } else if (sortByPrice) {
+            return productRepository.findByOrderByPriceAsc();
+        } else {
+            return productRepository.findByOrderByTypeAsc();
+        }
     }
 
     @Override
-    public List<Product> getAllProducts() {
-        return productRepository.findAll();
+    public Result addProduct(ProductDto product) {
+        final Product newProduct = ProductUtil.createProduct(product);
+        final Optional<Product> productBySku = productRepository.findBySku(product.getSku());;
+        if (productBySku.isEmpty()) {
+            return new Result(productRepository.save(newProduct));
+        } else {
+            return new Result(false, "Can't add product with such SKU, it's already exists in system!");
+        }
     }
 
     @Override
-    public BaseEntity saveProduct(Product product) {
-        return productRepository.save(product);
+    public Result updateProduct(Long id, Long sku, ProductDto productDto) {
+        final Optional<Product> productByIdOrSku = getProduct(id, sku);
+        final Optional<Product> productByNewSku = getProduct(null, productDto.getSku());
+        if (productByNewSku.isPresent() && !(productByNewSku.get().getId().equals(id) || productByNewSku.get().getSku().equals(sku))) {
+            return new Result(false, "Can't change SKU of product, as it's already exists in system!");
+        }
+        if (productByIdOrSku.isPresent()) {
+            final Product productForUpdate = ProductUtil.createProduct(productDto);
+            productForUpdate.setId(productByIdOrSku.get().getId());
+            final Product updatedProduct = productRepository.save(productForUpdate);
+            return new Result(updatedProduct);
+        } else {
+            return new Result(false,"Can't find product with such ID or SKU to update!");
+        }
     }
 
     @Override
-    public void deleteProduct(Product product) {
+    public void deleteProduct(final Product product) {
         productRepository.delete(product);
     }
 }

@@ -1,10 +1,9 @@
 package com.xsolla.estore.controller;
 
 import com.xsolla.estore.dto.ProductDto;
-import com.xsolla.estore.model.BaseEntity;
 import com.xsolla.estore.model.Product;
+import com.xsolla.estore.model.Result;
 import com.xsolla.estore.service.ProductService;
-import com.xsolla.estore.util.ProductUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -27,30 +26,28 @@ public class ProductController {
 
     @GetMapping("/get")
     public ResponseEntity<Product> getProduct(final Long id, final Long sku) {
-        Optional<Product> product = getProductByIdOrSku(id, sku);
+        final Optional<Product> product = productService.getProduct(id, sku);
         return product.map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.notFound().build());
     }
 
     @GetMapping("/getAll")
-    public List<Product> getAllProducts() {
-        return productService.getAllProducts();
+    public List<Product> getAllProducts(final boolean sortByPrice, final boolean sortByType) {
+        return productService.getAllProducts(sortByPrice, sortByType);
     }
 
     @PostMapping("/add")
     public ResponseEntity<?> addProduct(@RequestBody ProductDto product) {
-        final Product newProduct = ProductUtil.createProduct(product);
-        final Optional<Product> productBySku = productService.findProductBySku(product.getSku());
-        if (productBySku.isEmpty()) {
-            final BaseEntity savedProduct = productService.saveProduct(newProduct);
-            return ResponseEntity.ok(savedProduct);
+        final Result result = productService.addProduct(product);
+        if (result.isSuccess()) {
+            return ResponseEntity.ok(result.getProduct());
         } else {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Product with such SKU is already in system!");
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(result.getMessage());
         }
     }
 
     @PostMapping("/delete")
     public ResponseEntity<?> deleteProduct(final Long id, final Long sku) {
-        final Optional<Product> product = getProductByIdOrSku(id, sku);
+        final Optional<Product> product = productService.getProduct(id, sku);
         if (product.isPresent()) {
             productService.deleteProduct(product.get());
         } else {
@@ -64,29 +61,11 @@ public class ProductController {
         if (Objects.isNull(productDto)) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Product is not provided!");
         }
-        final Optional<Product> productByIdOrSku = getProductByIdOrSku(id, sku);
-        final Optional<Product> productByNewSku = productService.findProductBySku(productDto.getSku());
-        if (productByNewSku.isPresent() && !(productByNewSku.get().getId().equals(id) || productByNewSku.get().getSku().equals(sku))) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Can't change SKU of product, as it's already exists in system!");
-        }
-        if (productByIdOrSku.isPresent()) {
-            final Product productForUpdate = ProductUtil.createProduct(productDto);
-            productForUpdate.setId(productByIdOrSku.get().getId());
-            final BaseEntity updatedProduct = productService.saveProduct(productForUpdate);
-            return ResponseEntity.ok(updatedProduct);
+        final Result result = productService.updateProduct(id, sku, productDto);
+        if (result.isSuccess()) {
+            return ResponseEntity.ok(result.getProduct());
         } else {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Can't find product with such ID or SKU to update!");
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(result.getMessage());
         }
-    }
-
-    private Optional<Product> getProductByIdOrSku(final Long id, final Long sku) {
-        Optional<Product> product = Optional.empty();
-        if (Objects.nonNull(id)) {
-            product = productService.findProductById(id);
-        }
-        if (product.isEmpty() && Objects.nonNull(sku)) {
-            product = productService.findProductBySku(sku);
-        }
-        return product;
     }
 }
