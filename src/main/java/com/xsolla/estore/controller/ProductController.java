@@ -1,9 +1,14 @@
 package com.xsolla.estore.controller;
 
+import com.sun.istack.NotNull;
 import com.xsolla.estore.dto.ProductDto;
 import com.xsolla.estore.model.Product;
 import com.xsolla.estore.model.Result;
 import com.xsolla.estore.service.ProductService;
+import io.swagger.annotations.ApiOperation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
@@ -25,42 +30,75 @@ public class ProductController {
     }
 
     @GetMapping("/get")
-    public ResponseEntity<Product> getProduct(final Long id, final Long sku) {
+    @ApiOperation(value = "Get product by ID or SKU")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Product is returned"),
+            @ApiResponse(responseCode = "400", description = "Search can't be performed as ID & SKU params are null"),
+            @ApiResponse(responseCode = "404", description = "Can't find product")
+    })
+    public ResponseEntity<?> getProduct(@Parameter(description = "ID of product to search") final Long id,
+                                        @Parameter(description = "SKU of product to search") final Long sku) {
+        if (Objects.isNull(id) && Objects.isNull(sku)) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Search can't be performed as ID & SKU params are null");
+        }
         final Optional<Product> product = productService.getProduct(id, sku);
         return product.map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.notFound().build());
     }
 
     @GetMapping("/getAll")
-    public Page<Product> getAllProducts(@RequestParam(required=false,defaultValue="false") final boolean sortByPrice,
-                                        @RequestParam(required=false,defaultValue="false") final boolean sortByType,
-                                        @RequestParam(required=false,defaultValue="0") final int page,
-                                        @RequestParam(required=false,defaultValue="25") final int size) {
+    @ApiOperation(value = "Get all products", notes = "By default products are sorted by ID.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Products are returned")
+    })
+    public Page<Product> getAllProducts(@RequestParam(required=false,defaultValue="false") @Parameter(description = "Sort by price") final boolean sortByPrice,
+                                        @RequestParam(required=false,defaultValue="false") @Parameter(description = "Sort by type") final boolean sortByType,
+                                        @RequestParam(required=false,defaultValue="0") @Parameter(description = "Num of page to return. Default is 0") final int page,
+                                        @RequestParam(required=false,defaultValue="25") @Parameter(description = "Num of results on page. Default is 25") final int size) {
         return productService.getAllProducts(sortByPrice, sortByType, page, size);
     }
 
     @PostMapping("/add")
-    public ResponseEntity<?> addProduct(@RequestBody ProductDto product) {
+    @ApiOperation(value = "Add new product")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Added product is returned"),
+            @ApiResponse(responseCode = "400", description = "Provided data is bad")
+    })
+    public ResponseEntity<?> addProduct(@RequestBody @NotNull @Parameter(description = "Product to add") ProductDto product) {
         final Result result = productService.addProduct(product);
         if (result.isSuccess()) {
             return ResponseEntity.ok(result.getProduct());
         } else {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(result.getMessage());
+            return ResponseEntity.status(result.getHttpStatus()).body(result.getMessage());
         }
     }
 
     @PostMapping("/delete")
-    public ResponseEntity<?> deleteProduct(final Long id, final Long sku) {
+    @ApiOperation(value = "Delete the product")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Added product is returned"),
+            @ApiResponse(responseCode = "404", description = "Can't find product by provided ID or SKU")
+    })
+    public ResponseEntity<?> deleteProduct(@RequestParam(required=false) @Parameter(description = "ID of product to delete") final Long id,
+                                           @RequestParam(required=false) @Parameter(description = "SKU of product to delete") final Long sku) {
         final Optional<Product> product = productService.getProduct(id, sku);
         if (product.isPresent()) {
             productService.deleteProduct(product.get());
+            return ResponseEntity.ok().build();
         } else {
             return ResponseEntity.notFound().build();
         }
-        return ResponseEntity.ok().build();
     }
 
     @PostMapping("/update")
-    public ResponseEntity<?> updateProduct(final Long id, final Long sku, @RequestBody final ProductDto productDto) {
+    @ApiOperation(value = "Update the product", notes = "As SKU should be unique, the new SKU shouldn't present in system!")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Product is updated successfully"),
+            @ApiResponse(responseCode = "400", description = "Provided data is bad"),
+            @ApiResponse(responseCode = "404", description = "Can't find product by provided ID or SKU to update")
+    })
+    public ResponseEntity<?> updateProduct(@RequestParam(required=false) @Parameter(description = "ID of product to update") final Long id,
+                                           @RequestParam(required=false) @Parameter(description = "SKU of product to update") final Long sku,
+                                           @RequestBody final ProductDto productDto) {
         if (Objects.isNull(productDto)) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Product is not provided!");
         }
@@ -68,7 +106,7 @@ public class ProductController {
         if (result.isSuccess()) {
             return ResponseEntity.ok(result.getProduct());
         } else {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(result.getMessage());
+            return ResponseEntity.status(result.getHttpStatus()).body(result.getMessage());
         }
     }
 }

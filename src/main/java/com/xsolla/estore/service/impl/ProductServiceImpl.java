@@ -9,6 +9,7 @@ import com.xsolla.estore.util.ProductUtil;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -63,7 +64,7 @@ public class ProductServiceImpl implements ProductService {
         if (productBySku.isEmpty()) {
             return new Result(productRepository.save(newProduct));
         } else {
-            return new Result(false, "Can't add product with such SKU, it's already exists in system!");
+            return new Result(false, "Can't add product with such SKU, it's already exists in system!", HttpStatus.BAD_REQUEST);
         }
     }
 
@@ -72,7 +73,7 @@ public class ProductServiceImpl implements ProductService {
         final Optional<Product> productByIdOrSku = getProduct(id, sku);
         final Optional<Product> productByNewSku = getProduct(null, productDto.getSku());
         if (productByNewSku.isPresent() && !(productByNewSku.get().getId().equals(id) || productByNewSku.get().getSku().equals(sku))) {
-            return new Result(false, "Can't change SKU of product, as it's already exists in system!");
+            return new Result(false, "Can't change SKU of product, as it's already exists in system!", HttpStatus.BAD_REQUEST);
         }
         if (productByIdOrSku.isPresent()) {
             final Product productForUpdate = ProductUtil.createProduct(productDto);
@@ -80,7 +81,7 @@ public class ProductServiceImpl implements ProductService {
             final Product updatedProduct = productRepository.save(productForUpdate);
             return new Result(updatedProduct);
         } else {
-            return new Result(false,"Can't find product with such ID or SKU to update!");
+            return new Result(false,"Can't find product with such ID or SKU to update!", HttpStatus.NOT_FOUND);
         }
     }
 
