@@ -42,7 +42,11 @@ public class ProductController {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Search can't be performed as ID & SKU params are null");
         }
         final Optional<Product> product = productService.getProduct(id, sku);
-        return product.map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.notFound().build());
+        if (product.isPresent()) {
+            return ResponseEntity.ok(product.get().getId());
+        } else {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Can't find product");
+        }
     }
 
     @GetMapping("/getAll")
