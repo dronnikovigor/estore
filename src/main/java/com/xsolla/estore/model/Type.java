@@ -4,6 +4,6 @@ public enum Type {
 
     GAME,
     CLOTHES,
-    COINS
+    COIN
 
 }

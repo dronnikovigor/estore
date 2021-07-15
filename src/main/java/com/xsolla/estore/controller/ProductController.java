@@ -5,11 +5,11 @@ import com.xsolla.estore.model.Product;
 import com.xsolla.estore.model.Result;
 import com.xsolla.estore.service.ProductService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -31,8 +31,11 @@ public class ProductController {
     }
 
     @GetMapping("/getAll")
-    public List<Product> getAllProducts(final boolean sortByPrice, final boolean sortByType) {
-        return productService.getAllProducts(sortByPrice, sortByType);
+    public Page<Product> getAllProducts(@RequestParam(required=false,defaultValue="false") final boolean sortByPrice,
+                                        @RequestParam(required=false,defaultValue="false") final boolean sortByType,
+                                        @RequestParam(required=false,defaultValue="0") final int page,
+                                        @RequestParam(required=false,defaultValue="25") final int size) {
+        return productService.getAllProducts(sortByPrice, sortByType, page, size);
     }
 
     @PostMapping("/add")
@@ -65,7 +68,7 @@ public class ProductController {
         if (result.isSuccess()) {
             return ResponseEntity.ok(result.getProduct());
         } else {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(result.getMessage());
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(result.getMessage());
         }
     }
 }

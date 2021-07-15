@@ -6,9 +6,13 @@ import com.xsolla.estore.model.Result;
 import com.xsolla.estore.repository.ProductRepository;
 import com.xsolla.estore.service.ProductService;
 import com.xsolla.estore.util.ProductUtil;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -36,16 +40,20 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
-    public List<Product> getAllProducts(boolean sortByPrice, boolean sortByType) {
-        if (!(sortByPrice || sortByType)) {
-            return productRepository.findAll();
-        } else if (sortByPrice && sortByType) {
-            return productRepository.findByOrderByTypeAsc();
-        } else if (sortByPrice) {
-            return productRepository.findByOrderByPriceAsc();
-        } else {
-            return productRepository.findByOrderByTypeAsc();
+    public Page<Product> getAllProducts(final boolean sortByPrice, final boolean sortByType, final int page, final int size) {
+        List<String> properties = new ArrayList<>();
+        if (sortByType) {
+            properties.add("type");
         }
+        if (sortByPrice) {
+            properties.add("price");
+        }
+        if (properties.isEmpty()) {
+            properties.add("id");
+        }
+        final Sort orders = Sort.by(Sort.Direction.ASC, properties.toArray(new String[0]));
+        final PageRequest pageRequest = PageRequest.of(page, size, orders);
+        return productRepository.findAll(pageRequest);
     }
 
     @Override
