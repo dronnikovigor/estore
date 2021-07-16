@@ -20,13 +20,13 @@
   Также предусмотрена возможность сортировки товаров по типу товара и стоимости (как совместно, так и раздельно) - по умолчанию сортировка по идентификатору.
 
 # Heroku
-Проект развернут на публичном хостинге Heroku: https://estore-xsolla-prod.herokuapp.com  
+Проект развернут на публичном хостинге Heroku (with auto-deploy from github): https://estore-xsolla-prod.herokuapp.com  
 С API можно ознакомиться тут: https://estore-xsolla-prod.herokuapp.com/swagger-ui/index.html
 
 # Локальный запуск
 Перед запуском необходимо убедиться, что на ПК установлено: Java 11 (JAVA_HOME должно быть указано), Maven.  
 В командной строке, находясь в директории приложения, запустить:  
-```mvnw -DskipTests clean dependency:list install```
-После запуска приложение доступно по адресу: http://localhost:8080
+```mvnw -DskipTests clean dependency:list install```  
+После запуска приложение будет доступно по адресу: http://localhost:8080  
 С API можно ознакомиться тут: http://localhost:8080/swagger-ui/index.html
 
